@@ -1,0 +1,13 @@
+{
+  "name": "quiz-app",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "preview": "npm --prefix frontend run preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0"
+  }
+}
