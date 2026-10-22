@@ -11,7 +11,6 @@ import {
   BarChart3,
   FolderGit2,
   ShieldAlert,
-  HelpCircle,
   FileText,
   X
 } from 'lucide-react';
@@ -34,20 +33,28 @@ const MENUS_BY_ROLE = {
     { id: 'results', label: 'Course Analytics', icon: <BarChart3 size={17} /> }
   ],
   admin: [
-    { id: 'dashboard', label: 'System Overview', icon: <LayoutDashboard size={17} /> },
-    { id: 'users', label: 'User & Role Access', icon: <Users size={17} /> },
+    { id: 'dashboard', label: 'Institutional Overview', icon: <LayoutDashboard size={17} /> },
+    { id: 'users', label: 'Lecturer & Student Accounts', icon: <Users size={17} /> },
     { id: 'courses', label: 'Course Directory', icon: <BookOpen size={17} /> },
-    { id: 'quizzes', label: 'All Quizzes', icon: <FileText size={17} /> },
+    { id: 'quizzes', label: 'Institutional Quizzes', icon: <FileText size={17} /> },
+    { id: 'imports', label: 'PDF Pipeline Monitor', icon: <FolderGit2 size={17} /> }
+  ],
+  super_admin: [
+    { id: 'dashboard', label: 'Platform Overview', icon: <LayoutDashboard size={17} /> },
+    { id: 'users', label: 'User & Role Governance', icon: <Users size={17} />, badge: 'Root' },
+    { id: 'courses', label: 'Global Course Directory', icon: <BookOpen size={17} /> },
+    { id: 'quizzes', label: 'All Quizzes & Archives', icon: <FileText size={17} /> },
     { id: 'imports', label: 'PDF Pipeline Monitor', icon: <FolderGit2 size={17} /> },
-    { id: 'security', label: 'Security & RLS Logs', icon: <ShieldAlert size={17} /> },
-    { id: 'settings', label: 'Platform Config', icon: <Settings size={17} /> }
+    { id: 'security', label: 'Security & RLS Logs', icon: <ShieldAlert size={17} />, badge: 'Audit' },
+    { id: 'settings', label: 'Platform Settings', icon: <Settings size={17} /> }
   ]
 };
 
 const ROLE_LABELS = {
   student: 'Student portal',
   lecturer: 'Lecturer workspace',
-  admin: 'Admin console'
+  admin: 'Admin console',
+  super_admin: 'Super Admin console'
 };
 
 export default function Sidebar({ role = 'student', activeTab = 'dashboard', onSelectTab, open = false, onClose }) {
@@ -59,31 +66,37 @@ export default function Sidebar({ role = 'student', activeTab = 'dashboard', onS
         <span>{ROLE_LABELS[role] || 'Portal'}</span>
         <button
           type="button"
-          className="icon-btn icon-btn--ghost sidebar__close"
-          onClick={onClose}
+          className="icon-btn icon-btn--ghost"
           aria-label="Close navigation"
+          onClick={onClose}
+          style={{ width: 28, height: 28 }}
         >
-          <X size={16} />
+          <X size={15} />
         </button>
       </div>
 
       <nav className="sidebar__nav">
         {items.map((item) => {
-          const isActive = activeTab === item.id;
+          const active = activeTab === item.id;
           return (
             <button
               key={item.id}
               type="button"
-              className="nav-item"
-              aria-current={isActive ? 'page' : undefined}
-              onClick={() => onSelectTab && onSelectTab(item.id)}
+              className={`sidebar__item ${active ? 'sidebar__item--active' : ''}`}
+              onClick={() => {
+                if (onSelectTab) onSelectTab(item.id);
+                if (onClose) onClose();
+              }}
+              aria-current={active ? 'page' : undefined}
             >
-              <span className="nav-item__icon" aria-hidden="true">
+              <span className="sidebar__item-icon" aria-hidden="true">
                 {item.icon}
               </span>
-              <span className="nav-item__text">{item.label}</span>
+              <span className="sidebar__item-label">{item.label}</span>
               {item.badge && (
-                <Badge variant={isActive ? 'primary' : 'default'}>{item.badge}</Badge>
+                <Badge variant={active ? 'brand' : 'neutral'} size="sm">
+                  {item.badge}
+                </Badge>
               )}
             </button>
           );
@@ -91,12 +104,11 @@ export default function Sidebar({ role = 'student', activeTab = 'dashboard', onS
       </nav>
 
       <div className="sidebar__footer">
-        <div className="sidebar__note">
-          <HelpCircle size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <strong>Stage 1 UI foundation</strong>
-            Live Supabase data, RLS policies, and PDF processing connect in Stage 3.
-          </div>
+        <div className="status-indicator">
+          <span className="status-indicator__dot" />
+          <span className="status-indicator__label">
+            {role === 'super_admin' ? 'Root Governance' : role === 'admin' ? 'Institutional Admin' : 'Supabase Connected'}
+          </span>
         </div>
       </div>
     </aside>

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -8,44 +11,76 @@ import LecturerDashboard from './pages/lecturer/LecturerDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import DesignSystemPreview from './pages/DesignSystemPreview';
 
-export default function App() {
-  const [role, setRole] = useState('student');
+/**
+ * Root entry point handler:
+ * If user is not authenticated -> redirects immediately to /login.
+ * If user is already authenticated -> redirects to their verified role portal.
+ */
+function RootEntry() {
+  const { isAuthenticated, role, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="center-page" style={{ minHeight: '80vh' }}>
+        <div className="spinner" aria-label="Verifying credentials..." />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    if (role === 'super_admin' || role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    if (role === 'lecturer') {
+      return <Navigate to="/lecturer" replace />;
+    }
+    return <Navigate to="/student" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
+}
+
+function AppRoutes() {
+  const { role, setPreviewRole } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleRoleChange = (newRole) => {
-    setRole(newRole);
+    setPreviewRole(newRole);
     setActiveTab('dashboard');
   };
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Landing Page Route */}
-        <Route
-          path="/"
-          element={
-            <AppLayout role={role} onRoleChange={handleRoleChange} showSidebar={false}>
-              <LandingPage />
-            </AppLayout>
-          }
-        />
+    <Routes>
+      {/* Root Entry: Immediately redirects to login or user's verified role portal */}
+      <Route path="/" element={<RootEntry />} />
 
-        {/* Authentication Sign-in Preview */}
-        <Route
-          path="/login"
-          element={
-            <AppLayout role={role} onRoleChange={handleRoleChange} showSidebar={false}>
-              <LoginPage onRoleChange={handleRoleChange} />
-            </AppLayout>
-          }
-        />
+      {/* Login & Registration: The first screen the user interacts with */}
+      <Route
+        path="/login"
+        element={
+          <AppLayout role={role} onRoleChange={handleRoleChange} showSidebar={false}>
+            <LoginPage />
+          </AppLayout>
+        }
+      />
 
-        {/* Student Portal Preview */}
-        <Route
-          path="/student"
-          element={
+      {/* Optional Platform Overview / Landing page */}
+      <Route
+        path="/overview"
+        element={
+          <AppLayout role={role} onRoleChange={handleRoleChange} showSidebar={false}>
+            <LandingPage />
+          </AppLayout>
+        }
+      />
+
+      {/* Student Portal (Accessible by Students and Staff) */}
+      <Route
+        path="/student"
+        element={
+          <ProtectedRoute allowedRoles={['student', 'lecturer', 'admin', 'super_admin']}>
             <AppLayout
-              role="student"
+              role={role}
               onRoleChange={handleRoleChange}
               showSidebar={true}
               activeTab={activeTab}
@@ -53,15 +88,17 @@ export default function App() {
             >
               <StudentDashboard activeTab={activeTab} />
             </AppLayout>
-          }
-        />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Lecturer Portal Preview */}
-        <Route
-          path="/lecturer"
-          element={
+      {/* Lecturer Portal (Accessible by Lecturers and Admins) */}
+      <Route
+        path="/lecturer"
+        element={
+          <ProtectedRoute allowedRoles={['lecturer', 'admin', 'super_admin']}>
             <AppLayout
-              role="lecturer"
+              role={role}
               onRoleChange={handleRoleChange}
               showSidebar={true}
               activeTab={activeTab}
@@ -69,15 +106,17 @@ export default function App() {
             >
               <LecturerDashboard activeTab={activeTab} />
             </AppLayout>
-          }
-        />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Super Admin Console Preview */}
-        <Route
-          path="/admin"
-          element={
+      {/* Admin & Super Admin Console */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <AppLayout
-              role="admin"
+              role={role}
               onRoleChange={handleRoleChange}
               showSidebar={true}
               activeTab={activeTab}
@@ -85,22 +124,32 @@ export default function App() {
             >
               <AdminDashboard activeTab={activeTab} />
             </AppLayout>
-          }
-        />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Comprehensive Design System Showcase */}
-        <Route
-          path="/design-system"
-          element={
-            <AppLayout role={role} onRoleChange={handleRoleChange} showSidebar={false}>
-              <DesignSystemPreview />
-            </AppLayout>
-          }
-        />
+      {/* Design System Preview */}
+      <Route
+        path="/design-system"
+        element={
+          <AppLayout role={role} onRoleChange={handleRoleChange} showSidebar={false}>
+            <DesignSystemPreview />
+          </AppLayout>
+        }
+      />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      {/* Fallback to root entry */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

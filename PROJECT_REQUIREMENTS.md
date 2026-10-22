@@ -6,11 +6,11 @@ stages for the quiz platform. Google Antigravity should read this
 document before making project changes and use it as the main source of
 project requirements.
 
-**Project status:** Initial requirements\
-**Frontend:** React + Vite\
-**Backend services:** Supabase\
-**Database:** Supabase PostgreSQL\
-**Primary users:** Super Admin, Lecturer, Student
+**Project status:** In progress — UI foundation created; Supabase connection tested; database/security Stage 2 reported as applied. See Section 12 for the current progress and stage mapping.  
+**Frontend:** React + Vite  
+**Backend services:** Supabase  
+**Database:** Supabase PostgreSQL  
+**Primary users:** Super Admin, Admin, Lecturer, Student
 
 ------------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ and configuration requirements.
 
 ## 3. User Roles and Permissions
 
-The platform has three primary roles.
+The platform has four primary roles: Super Admin, Admin, Lecturer, and Student. Their permissions must be enforced by Supabase RLS and trusted server-side/database logic, not only by hiding UI elements.
 
 ### 3.1 Super Admin
 
@@ -105,7 +105,22 @@ Only a trusted, authorized user may receive the Super Admin role. Users
 must not be able to grant this role to themselves by changing frontend
 data or editing their profile.
 
-### 3.2 Lecturer
+### 3.2 Admin
+
+An Admin manages day-to-day operation of the platform for the institution, with fewer privileges than the Super Admin.
+
+Permissions:
+- View the institutional dashboard and relevant activity summaries.
+- Create, update, deactivate, and manage Lecturer and Student accounts, subject to the institution's account policy.
+- Create and manage courses and assign Lecturers to courses.
+- View and manage quizzes and PDF imports across the institution where operationally required.
+- Upload PDFs, review extracted questions, verify answers, and manage quiz publication when authorized by institutional policy.
+- View results and leaderboards across the institution for legitimate administration purposes.
+- Help resolve account and course-access issues.
+
+An Admin must not create, promote, deactivate, or change the role of a Super Admin; change protected platform-wide security settings; access secret keys; or bypass audit and data-protection rules. Role changes that grant Admin or Super Admin privileges must use trusted, authorized logic. The exact administrative actions must be enforced in RLS policies or secure backend functions.
+
+### 3.3 Lecturer
 
 A Lecturer manages academic content within their assigned courses.
 
@@ -119,7 +134,7 @@ assigned courses. - View relevant course leaderboards.
 Lecturers must not be able to manage Super Admin accounts or access
 unrelated courses unless explicitly authorized.
 
-### 3.3 Student
+### 3.4 Student
 
 A Student uses the platform to take quizzes and monitor performance.
 
@@ -132,11 +147,13 @@ Students must not be able to upload question papers, edit questions,
 publish quizzes, change scores, or access another student's private
 attempt details.
 
-### Optional future role
+### Role hierarchy and account provisioning
 
-A separate support or content-review role may be introduced later if
-needed. Do not add more roles to the first version unless they solve a
-real requirement.
+The first release uses these four roles: **Super Admin > Admin > Lecturer > Student** in terms of administrative scope; this is a permissions hierarchy, not a ranking of users. The Super Admin is the highest-trust role. Admins handle institutional operations, Lecturers work within assigned courses, and Students use the learning features.
+
+Do not allow users to choose or elevate their own role during public registration. New public registrations should receive the Student role by default unless an approved institutional workflow specifies otherwise. Super Admin and Admin accounts must be provisioned or promoted through a trusted, authorized process. Keep an audit trail for privileged role changes.
+
+Do not introduce additional roles in the first release without updating this document first.
 
 ------------------------------------------------------------------------
 
@@ -146,7 +163,7 @@ This is one of the platform's core features.
 
 ### Step 1: Upload
 
-An authorized Super Admin or Lecturer opens the PDF import page, selects
+An authorized Super Admin, Admin, or Lecturer with permission for the relevant course opens the PDF import page, selects
 a PDF, and submits it.
 
 The system should: - Validate file type and file size. - Show upload
@@ -477,8 +494,7 @@ student results, and administrative controls.
     information.
 -   Provide useful error messages without exposing secrets or internal
     stack traces.
--   Document database policies and test them using separate Super Admin,
-    Lecturer, and Student accounts.
+-   Document database policies and test them using separate Super Admin, Admin, Lecturer, and Student accounts.
 
 ------------------------------------------------------------------------
 
@@ -553,34 +569,36 @@ platform in a single large change.
 **Completion criteria:** The app runs locally, the project structure is
 clear, and no existing working setup has been unnecessarily replaced.
 
-### Stage 2 --- UI foundation
+### Stage 2 --- UI foundation and database/security foundation (progress update)
 
--   Create the shared layout, navigation, buttons, forms, cards, tables,
-    and feedback states.
--   Build responsive page shells for the main roles.
--   Use realistic sample data only where necessary to develop the
-    interface.
--   Clearly separate temporary mock data from real Supabase services.
+The original plan described the UI foundation as Stage 2. During the actual build, database/schema and security setup was also treated as Stage 2, and the user reports that this database/security Stage 2 has already been applied. The UI screens have also been designed, and a Supabase connection/network test returned HTTP 200 with no active session.
 
-**Completion criteria:** The main pages look coherent and work
-responsively, even before backend integration.
+**Treat these as reported progress, not proof that every feature is complete.** Before changing or re-running migrations, inspect the current repository and Supabase project. Verify the actual tables, foreign keys, indexes, RLS enablement and policies, storage configuration, and migration history. Do not duplicate tables or blindly reapply SQL. A successful connection test confirms connectivity only; it does not prove authentication flows, table access, role enforcement, or RLS policies work correctly.
+
+- Preserve the existing UI and working configuration.
+- Compare the implemented schema and policies with Sections 3, 9, and 10, including the Admin role.
+- Identify missing or incorrect pieces and propose a safe migration/correction plan before applying changes.
+- Separate working backend integration from any remaining mock data.
+
+**Completion criteria:** Existing UI is preserved; the current database and security setup is inspected and documented; differences from this specification are identified; no duplicate or destructive migration is applied without approval.
 
 ### Stage 3 --- Supabase connection and authentication
 
--   Configure Supabase using environment variables.
--   Implement registration, login, logout, and session handling.
--   Add role-aware navigation and protected routes.
--   Build the database migration for profiles and role management.
--   Implement and test RLS policies.
+-   Verify the existing Supabase client configuration and environment variables without exposing secrets.
+-   Implement or finish registration, login, logout, and session handling.
+-   Add role-aware navigation and protected routes for Super Admin, Admin, Lecturer, and Student.
+-   Verify profiles and trusted role provisioning against the already-applied schema; create a new migration only if inspection shows it is needed.
+-   Test RLS policies using separate accounts for all four roles, including attempts to access or modify records outside each role's permissions.
+-   Ensure public registration cannot create Admin or Super Admin accounts.
 
-**Completion criteria:** Real users can authenticate, and each role
-receives only the permitted access.
+**Completion criteria:** Real users can authenticate, and each of the four roles receives only the permitted access in both the UI and database/backend. A successful Supabase connection alone does not satisfy this stage.
 
-### Stage 4 --- Courses and permissions
+### Stage 4 --- Courses, assignments, and operational administration
 
--   Implement courses and course assignments/enrollment.
--   Add Super Admin and Lecturer course-management interfaces.
--   Restrict lecturer operations to assigned courses.
+-   Implement or verify courses and course assignments/enrollment.
+-   Add Super Admin and Admin course-management interfaces.
+-   Allow Admins to manage institutional courses and assign Lecturers, without granting Super Admin privileges.
+-   Restrict Lecturer operations to assigned courses and Student access to permitted courses/quizzes.
 
 **Completion criteria:** Course access and permissions are enforced by
 the database and secure backend logic.
@@ -673,13 +691,9 @@ Before modifying the codebase:
 15. Do not skip ahead to PDF processing before the authentication,
     database, and permission foundations are ready.
 
-### First instruction to Antigravity
+### Current instruction to Antigravity
 
-"Read `docs/PROJECT_REQUIREMENTS.md` completely. Inspect the current
-repository without deleting or replacing existing working files. Tell me
-what stage the project is at, identify missing prerequisites, and
-propose the implementation plan for Stage 1. Do not implement later
-stages yet."
+"Read `docs/PROJECT_REQUIREMENTS.md` completely before making changes. The UI foundation has already been designed, the user reports that the database/security Stage 2 has been applied, and the Supabase connection test succeeded. Inspect the existing repository, Git state, Supabase migrations/schema, and RLS policies before making changes. Do not recreate the project, duplicate tables, or blindly reapply migrations. Verify the four roles—Super Admin, Admin, Lecturer, and Student—against this document. Report what is implemented, what is only a UI/mockup, what is missing, and the safest next step. Preserve working files and ask before destructive changes or major assumptions. Continue only with the next incomplete stage after presenting the audit."
 
 ------------------------------------------------------------------------
 
@@ -689,7 +703,7 @@ The project is on the right track when:
 
 -   [ ] The React app runs locally.
 -   [ ] Supabase is configured using safe environment variables.
--   [ ] Super Admin, Lecturer, and Student permissions are defined.
+-   [ ] Super Admin, Admin, Lecturer, and Student permissions are defined and enforced.
 -   [ ] Database migrations and RLS policies are version-controlled.
 -   [ ] Staff can upload PDFs to private storage.
 -   [ ] Extracted questions can be reviewed and corrected.

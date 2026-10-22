@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GraduationCap, Sun, Moon, Menu, X, User, Palette, ChevronDown } from 'lucide-react';
+import { GraduationCap, Sun, Moon, Menu, X, User, Palette, ChevronDown, LogOut } from 'lucide-react';
 import Button from '../common/Button';
+import { useAuth } from '../../hooks/useAuth';
 
 const NAV_LINKS = [
   { label: 'Overview', path: '/' },
@@ -14,7 +15,8 @@ const NAV_LINKS = [
 const ROLES = [
   { id: 'student', label: 'Student' },
   { id: 'lecturer', label: 'Lecturer' },
-  { id: 'admin', label: 'Admin' }
+  { id: 'admin', label: 'Admin' },
+  { id: 'super_admin', label: 'Super Admin' }
 ];
 
 export default function Navbar({
@@ -28,6 +30,7 @@ export default function Navbar({
 }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, profile, isAuthenticated, signOut } = useAuth();
 
   const isActive = (path) => location.pathname === path;
 
@@ -37,6 +40,16 @@ export default function Navbar({
   };
 
   const closeMobile = () => setMobileOpen(false);
+
+  // User display name from profile, auth metadata, or email
+  const displayName = profile?.display_name || user?.user_metadata?.display_name || user?.email?.split('@')[0] || (hasSidebar ? 'Alexander Rivera' : 'Preview User');
+
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'US';
 
   return (
     <header className="topbar">
@@ -49,11 +62,7 @@ export default function Navbar({
           onClick={() => (hasSidebar ? onToggleSidebar && onToggleSidebar() : setMobileOpen((open) => !open))}
         >
           {hasSidebar ? (
-            sidebarOpen ? (
-              <X size={18} />
-            ) : (
-              <Menu size={18} />
-            )
+            sidebarOpen ? <X size={18} /> : <Menu size={18} />
           ) : mobileOpen ? (
             <X size={18} />
           ) : (
@@ -89,6 +98,7 @@ export default function Navbar({
         </nav>
 
         <div className="topbar__actions">
+          {/* Quick Role Switcher */}
           <div className="role-chip" title="Switch the preview role">
             <span className="visually-hidden">Preview role</span>
             <span aria-hidden="true" style={{ display: 'inline-flex' }}>
@@ -116,6 +126,7 @@ export default function Navbar({
             <ChevronDown size={13} aria-hidden="true" />
           </div>
 
+          {/* Theme Toggle */}
           <button
             type="button"
             className="icon-btn icon-btn--ghost"
@@ -126,21 +137,42 @@ export default function Navbar({
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
 
-          {!hasSidebar && (
+          {/* User Status / Logout */}
+          {isAuthenticated ? (
+            <div className="row row-2" style={{ marginLeft: 'var(--space-2)' }}>
+              <span className="avatar" aria-hidden="true" title={user.email}>
+                {initials}
+              </span>
+              <span className="row row--between" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.2 }}>{displayName}</span>
+                <span className="text-xs text-muted" style={{ lineHeight: 1.2 }}>
+                  {currentRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              </span>
+              <button
+                type="button"
+                className="icon-btn icon-btn--ghost"
+                onClick={signOut}
+                title="Sign out"
+                aria-label="Sign out"
+                style={{ width: 28, height: 28, marginLeft: '0.25rem' }}
+              >
+                <LogOut size={14} />
+              </button>
+            </div>
+          ) : !hasSidebar ? (
             <Button as={Link} to="/login" variant="secondary" size="sm" icon={<User size={14} />}>
               Sign in
             </Button>
-          )}
-
-          {hasSidebar && (
+          ) : (
             <div className="row row-2" style={{ marginLeft: 'var(--space-2)' }}>
               <span className="avatar" aria-hidden="true">
-                AR
+                {initials}
               </span>
               <span className="row row--between" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.2 }}>Alexander Rivera</span>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.2 }}>{displayName}</span>
                 <span className="text-xs text-muted" style={{ lineHeight: 1.2 }}>
-                  {currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
+                  {currentRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
               </span>
             </div>
